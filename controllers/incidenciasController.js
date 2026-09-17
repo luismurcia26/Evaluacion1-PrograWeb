@@ -1,19 +1,31 @@
-// 1. base de datos temporal
+const { validarIncidencia } = require('../utils/helpers');
+
+// base de datos temporal
 const incidencias = [];
 
 // 2. Crear función para el método get
 const listarIncidencias = (req, res) => {
+
     // Simplemente devuelve el arreglo vacío en formato JSON
     res.json(incidencias);
 };
+
 // Función para registrar un nuevo problema (POST)
 const registrarIncidencia = (req, res) => {
-    // 1. Atrapamos los datos que el empleado envió desde internet
+
+    // guarda los datos que el usuario mandó en una variable
     const datos = req.body;
 
-    // 2. Llenamos nuestro "molde" con esos datos
+    // validamos los datos usando la función que creamos en helpers.js
+    const mensajeDeError = validarIncidencia(datos);
+    if (mensajeDeError) {
+        return res.status(400).json({ "mensaje": mensajeDeError });
+    }
+    
+
+    //  Llenamos con datos del usuario
     const nuevaIncidencia = {
-        id: incidencias.length + 1, // Inventamos un ID automático
+        id: incidencias.length + 1, // Inventa un ID automático
         empleado: datos.empleado,
         area: datos.area,
         descripcion: datos.descripcion,
@@ -21,16 +33,30 @@ const registrarIncidencia = (req, res) => {
         estado: "Pendiente" // Todas inician en pendiente por defecto
     };
 
-    // 3. Usamos el método push para empujar este nuevo objeto adentro de nuestra caja
+    //  Usamos el método push para agregar la nueva incidencia al arreglo
     incidencias.push(nuevaIncidencia);
 
-    // 4. Le respondemos al empleado con el mensaje de éxito que pide el profesor
+    //  responde al usuario
     res.json({
-        "mensaje": "Incidencia registrada correctamente"
+        "mensaje": "Incidencia registrada con exito"
     });
 };
+
+// Función para buscar una incidencia específica por su ID (GET por ID)
+const obtenerIncidenciaPorId = (req, res) => {
+    const idBuscado = parseInt(req.params.id);
+    const incidenciaEncontrada = incidencias.find(incidencia => incidencia.id === idBuscado);
+
+    if (!incidenciaEncontrada) {
+        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+    }
+
+    res.json(incidenciaEncontrada);
+};
+
 // Exportamos las funciones para que las rutas las puedan usar
 module.exports = {
     listarIncidencias,
-    registrarIncidencia // Agregas esta línea
+    registrarIncidencia,
+    obtenerIncidenciaPorId
 };

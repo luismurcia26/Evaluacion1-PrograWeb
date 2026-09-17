@@ -13,5 +13,5 @@ app.use('/incidencias', rutasIncidencias);
 // 4. Encendemos el servidor
 const PORT = 3000;
 app.listen(PORT, () => {
-    console.log(`¡Servidor listo! Prueba entrar a http://localhost:${PORT}/incidencias`);
+    console.log(`servidor listo en http://localhost:${PORT}/incidencias`);
 });
