@@ -54,9 +54,57 @@ const obtenerIncidenciaPorId = (req, res) => {
     res.json(incidenciaEncontrada);
 };
 
+// Función para actualizar una incidencia (PUT)
+const actualizarIncidencia = (req, res) => {
+    // 1. Buscamos la incidencia por su ID, igual que en el GET
+    const idBuscado = parseInt(req.params.id);
+    const incidenciaEncontrada = incidencias.find(incidencia => incidencia.id === idBuscado);
+
+    // 2. Si no existe, tiramos error 404
+    if (!incidenciaEncontrada) {
+        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+    }
+
+    // 3. Atrapamos los datos nuevos que mandó el usuario
+    const datosNuevos = req.body;
+
+    // 4. Actualizamos el estado (y cualquier otro dato que nos manden)
+    if (datosNuevos.estado) incidenciaEncontrada.estado = datosNuevos.estado;
+    if (datosNuevos.prioridad) incidenciaEncontrada.prioridad = datosNuevos.prioridad;
+    // (Puedes agregar más campos aquí si quieres)
+
+    // 5. Devolvemos mensaje de éxito
+    res.json({
+        "mensaje": "Incidencia actualizada con éxito",
+        "incidencia": incidenciaEncontrada
+    });
+};
+// Función para eliminar una incidencia (DELETE)
+const eliminarIncidencia = (req, res) => {
+    const idBuscado = parseInt(req.params.id);
+    
+    // Buscamos en qué POSICIÓN (índice) de la lista está ese reporte
+    const indice = incidencias.findIndex(incidencia => incidencia.id === idBuscado);
+
+    // Si findIndex devuelve -1, significa que no lo encontró
+    if (indice === -1) {
+        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+    }
+
+    // Usamos splice para borrar 1 elemento en esa posición exacta
+    incidencias.splice(indice, 1);
+
+    // Confirmamos la eliminación
+    res.json({
+        "mensaje": "Incidencia eliminada con éxito"
+    });
+};
+
 // Exportamos las funciones para que las rutas las puedan usar
 module.exports = {
     listarIncidencias,
     registrarIncidencia,
-    obtenerIncidenciaPorId
+    obtenerIncidenciaPorId,
+    actualizarIncidencia,
+    eliminarIncidencia
 };
