@@ -1,110 +1,147 @@
-const { validarIncidencia } = require('../utils/helpers');
+const { validarIncidencia, esTextoValido, normalizar } = require('../utils/helpers');//importar
 
 // base de datos temporal
 const incidencias = [];
 
-// 2. Crear función para el método get
-const listarIncidencias = (req, res) => {
+// Contador que solo sube. 
+let siguienteId = 1;
 
-    // Simplemente devuelve el arreglo vacío en formato JSON
+// GET /lista todas las incidencias
+const listarIncidencias = (req, res) => {
     res.json(incidencias);
 };
 
-// Función para registrar un nuevo problema (POST)
+// POST /registra una nueva incidencia
 const registrarIncidencia = (req, res) => {
-
-    // guarda los datos que el usuario mandó en una variable
-    const datos = req.body;
-
-    // validamos los datos usando la función que creamos en helpers.js
-    const mensajeDeError = validarIncidencia(datos);
-    if (mensajeDeError) {
-        return res.status(400).json({ "mensaje": mensajeDeError });
+    const { error, datos } = validarIncidencia(req.body);
+    if (error) {
+        return res.status(400).json({ mensaje: error });
     }
-    
 
-    //  Llenamos con datos del usuario
     const nuevaIncidencia = {
-        id: incidencias.length + 1, // Inventa un ID automático
-        empleado: datos.empleado,
-        area: datos.area,
-        descripcion: datos.descripcion,
-        prioridad: datos.prioridad,
-        estado: "Pendiente" // Todas inician en pendiente por defecto
+        id: siguienteId++,
+        ...datos,
+        estado: 'Pendiente' // todas inician en pendiente por defecto
     };
 
-    //  Usamos el método push para agregar la nueva incidencia al arreglo
-    incidencias.push(nuevaIncidencia);
+    incidencias.push(nuevaIncidencia); //guarda la incidencia en el arreglo temporal
 
-    //  responde al usuario
-    res.json({
-        "mensaje": "Incidencia registrada con exito"
-    });
+    res.status(201).json({ mensaje: 'Incidencia registrada correctamente' });//responde
 };
 
-// Función para buscar una incidencia específica por su ID (GET por ID)
+// GET /incidencias/:id para id especifico
 const obtenerIncidenciaPorId = (req, res) => {
     const idBuscado = parseInt(req.params.id);
     const incidenciaEncontrada = incidencias.find(incidencia => incidencia.id === idBuscado);
 
     if (!incidenciaEncontrada) {
-        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+        return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
     }
 
     res.json(incidenciaEncontrada);
 };
 
-// Función para actualizar una incidencia (PUT)
-const actualizarIncidencia = (req, res) => {
-    // 1. Buscamos la incidencia por su ID, igual que en el GET
+// PUT /incidencias/:id/estado cambia solo el estado, usando switch
+const cambiarEstado = (req, res) => {
     const idBuscado = parseInt(req.params.id);
     const incidenciaEncontrada = incidencias.find(incidencia => incidencia.id === idBuscado);
 
-    // 2. Si no existe, tiramos error 404
     if (!incidenciaEncontrada) {
-        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+        return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
     }
 
-    // 3. Atrapamos los datos nuevos que mandó el usuario
-    const datosNuevos = req.body;
+    if (!esTextoValido(req.body.estado)) {
+        return res.status(400).json({ mensaje: 'El campo "estado" es obligatorio y no puede estar vacío.' });
+    }
 
-    // 4. Actualizamos el estado (y cualquier otro dato que nos manden)
-    if (datosNuevos.estado) incidenciaEncontrada.estado = datosNuevos.estado;
-    if (datosNuevos.prioridad) incidenciaEncontrada.prioridad = datosNuevos.prioridad;
-    // (Puedes agregar más campos aquí si quieres)
+    const estadoNormalizado = normalizar(req.body.estado);
 
-    // 5. Devolvemos mensaje de éxito
+    // switch para validar y cambiar el estado
+    switch (estadoNormalizado) {
+        case 'Pendiente':
+        case 'En proceso':
+        case 'Resuelta':
+        case 'Cancelada':
+            incidenciaEncontrada.estado = estadoNormalizado;
+            break;
+        default:
+            return res.status(400).json({
+                mensaje: 'Estado inválido. Debe ser Pendiente, En Proceso, Resuelta o Cancelada.'
+            });
+    }
+
     res.json({
-        "mensaje": "Incidencia actualizada con éxito",
-        "incidencia": incidenciaEncontrada
+        mensaje: 'Estado actualizado correctamente',
+        incidencia: incidenciaEncontrada
     });
 };
-// Función para eliminar una incidencia (DELETE)
+
+// DELETE elimina una incidencia (uso de findIndex() + splice())
 const eliminarIncidencia = (req, res) => {
     const idBuscado = parseInt(req.params.id);
-    
-    // Buscamos en qué POSICIÓN (índice) de la lista está ese reporte
     const indice = incidencias.findIndex(incidencia => incidencia.id === idBuscado);
+//se usan findIndex() para obtener el índice de la incidencia en el arreglo y splice() para eliminarla. 
+// Si no se encuentra, devuelve un error 404.
 
-    // Si findIndex devuelve -1, significa que no lo encontró
     if (indice === -1) {
-        return res.status(404).json({ "mensaje": "Incidencia no encontrada" });
+        return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
     }
 
-    // Usamos splice para borrar 1 elemento en esa posición exacta
     incidencias.splice(indice, 1);
 
-    // Confirmamos la eliminación
+    res.json({ mensaje: 'Incidencia eliminada con éxito' });
+};
+
+// GET /estadisticas devuelve un objeto con el total de incidencias
+const obtenerEstadisticas = (req, res) => {
+    // filter() nos regresa un nuevo arreglo con solo los que cumplen la condición;
+    // .length nos dice cuántos hay.
     res.json({
-        "mensaje": "Incidencia eliminada con éxito"
+        totalIncidencias: incidencias.length,
+        pendientes: incidencias.filter(incidencia => incidencia.estado === 'Pendiente').length,
+        enProceso: incidencias.filter(incidencia => incidencia.estado === 'En proceso').length,
+        resueltas: incidencias.filter(incidencia => incidencia.estado === 'Resuelta').length,
+        canceladas: incidencias.filter(incidencia => incidencia.estado === 'Cancelada').length
     });
 };
 
-// Exportamos las funciones para que las rutas las puedan usar
+// GET /incidencias/:id/clasificacion
+const clasificarIncidencia = (req, res) => {
+    const idBuscado = parseInt(req.params.id);
+    const incidenciaEncontrada = incidencias.find(incidencia => incidencia.id === idBuscado);
+
+    if (!incidenciaEncontrada) {
+        return res.status(404).json({ mensaje: 'Incidencia no encontrada' });
+    }
+
+    let clasificacion;
+
+    switch (incidenciaEncontrada.prioridad) {
+        case 'Alta':
+            clasificacion = 'Crítica';
+            break;
+        case 'Media':
+            clasificacion = 'Importante';
+            break;
+        case 'Baja':
+            clasificacion = 'Normal';
+            break;
+        default:
+            clasificacion = 'Sin clasificar';
+    }
+
+    res.json({
+        id: incidenciaEncontrada.id,
+        clasificacion
+    });
+};
+
 module.exports = {
     listarIncidencias,
     registrarIncidencia,
     obtenerIncidenciaPorId,
-    actualizarIncidencia,
-    eliminarIncidencia
+    cambiarEstado,
+    eliminarIncidencia,
+    obtenerEstadisticas,
+    clasificarIncidencia
 };

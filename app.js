@@ -1,17 +1,20 @@
-const express = require('express');
+const express = require('express');//importar express
 const app = express();
 
-// 1. Le enseñamos a Express a entender JSON
+// 1. le enseña a Express que vamos a recibir JSON en el body de las peticiones
 app.use(express.json());
 
-// 2. Importamos las rutas que creaste
+// 2. Importamos las rutas y el controlador
 const rutasIncidencias = require('./routes/incidencias');
+const controlador = require('./controllers/incidenciasController');
 
-// 3. Le decimos a Express: "Cualquier petición que empiece con /incidencias, mándala a ese archivo"
+// 3. DELEGACION Cualquier petición que empiece con /incidencias va a ese archivo
 app.use('/incidencias', rutasIncidencias);
 
-// 4. Encendemos el servidor
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`servidor listo en http://localhost:${PORT}/incidencias`);
+// 4. Endpoint de estadísticas (va en la raíz, según el enunciado: GET /estadisticas)
+app.get('/estadisticas', controlador.obtenerEstadisticas);
+
+// 5. Enciende el servidor
+app.listen(3000, () => {
+    console.log(`servidor listo en http://localhost:3000/incidencias`);
 });

@@ -1,22 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
-// 1. Importamos el cerebro (controlador)
+// Importamos el controlador
 const controlador = require('../controllers/incidenciasController');
 
-// 2. Si alguien hace una petición GET a la raíz, lista todas las incidencias
+
+// Listar todas las incidencias
 router.get('/', controlador.listarIncidencias);
 
-// Buscar una sola incidencia por su ID <---
+// Buscar una incidencia por su ID
 router.get('/:id', controlador.obtenerIncidenciaPorId);
 
-// Actualizar una incidencia por su ID (PUT) <---
-router.put('/:id', controlador.actualizarIncidencia);
+// Clasificación automática según prioridad (switch)
+router.get('/:id/clasificacion', controlador.clasificarIncidencia);
 
-// 3. Si alguien manda datos nuevos (POST), ejecuta la función de registrar
+// Registrar una nueva incidencia
 router.post('/', controlador.registrarIncidencia);
 
+// Cambiar el estado de una incidencia (switch)
+router.put('/:id/estado', controlador.cambiarEstado);
+
+// Eliminar una incidencia
 router.delete('/:id', controlador.eliminarIncidencia);
 
-// 4. Exportamos el router
 module.exports = router;
